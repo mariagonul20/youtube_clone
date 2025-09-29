@@ -1,97 +1,59 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import api from "../../utils/api";
-import BasicLoader from "../../component/loader/basic-loader";
+import SkeletonLoader from "../../component/loader/skeleton-loader";
 import Error from "../../component/error";
-import Card from "../../component/card";
-import Spinner from "../../component/loader/spinner";
 import Shorts from "../../component/shorts";
+import Card from "../../component/card";
+import { useSearchParams } from "react-router-dom";
 
-const Search = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const Feed = () => {
   const [data, setData] = useState([]);
-  const [token, setToken] = useState(null);
-  const [moreLoading, setMoreLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = searchParams.get("category");
 
-  const [searchParams] = useSearchParams();
-  const query = searchParams.get("search_query");
-
-  // component yüklenince aratılan videoları al
+  // sayfa yüklenince
   useEffect(() => {
     setLoading(true);
 
-    const params = {
-      query,
-    };
+    // istek atılacak adresi belirle
+    const url = !selectedCategory
+      ? "/home"
+      : selectedCategory === "trendler"
+      ? "/trending"
+      : `/search?query=${selectedCategory}`;
 
     api
-      .get("/search", { params })
-      .then((res) => {
-        setData(res.data.data);
-        setToken(res.data.continuation);
-      })
+      .get(url)
+      .then((res) => setData(res.data.data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [selectedCategory]);
 
-  // devamını yükle butonuna basınca çalışıcak
-  const handleMore = () => {
-    setMoreLoading(true);
+  // veriyi kategorize et
+  const shortLists = data.filter((item) => item.type === "shorts_listing");
+  const videos = data.filter((item) => item.type === "video");
 
-    const params = {
-      query,
-      token,
-    };
+  if (loading) return <SkeletonLoader />;
 
-    api
-      .get("/search", { params })
-      .then((res) => {
-        setData([...data, ...res.data.data]);
-        setToken(res.data.continuation);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setMoreLoading(false));
-  };
-
-  const videos = data.filter(
-    (video) => video.type === "video" || video.type === "shorts" || video.type === "shorts_listing"
-  );
+  if (error) return <Error message={error} />;
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 h-[93vh] overflow-y-auto @container">
-      {loading ? (
-        <BasicLoader />
-      ) : error ? (
-        <Error message={error} />
-      ) : (
-        <>
-          <h2 className="text-2xl my-3">
-            <span className="font-bold">{query}</span> için sonuçlar
-          </h2>
+    <div className="page">
+      <div className="space-y-8">
+        {shortLists[0] && <Shorts data={shortLists[0].data} />}
 
-          <div className="flex flex-col gap-4">
-            {videos.map((video, key) =>
-              video.type === "shorts_listing" ? <Shorts data={video.data} /> : <Card video={video} key={key} isRow />
-            )}
-          </div>
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
+          {videos.map((video, key) => (
+            <Card video={video} key={key} />
+          ))}
+        </div>
 
-          {moreLoading && <Spinner />}
-
-          {token && !moreLoading && (
-            <div className="flex justify-center">
-              <button
-                onClick={handleMore}
-                className="bg-zinc-700 py-2 px-5 rounded-md my-10 cursor-pointer hover:bg-zinc-800 transition"
-              >
-                Daha Fazla
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        {shortLists[1] && <Shorts data={shortLists[1].data} />}
+      </div>
     </div>
   );
 };
 
-export default Search;
+export default Feed;
