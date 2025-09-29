@@ -10,7 +10,7 @@ const Feed = () => {
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category");
 
   // sayfa yüklenince
@@ -56,4 +56,5 @@ const Feed = () => {
   );
 };
 
-export default Feed;
+
+export default Feed; 
